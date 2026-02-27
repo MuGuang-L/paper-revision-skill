@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# Project output
+revised/
+.omc/papers/profiles/
+
+# Logs
+*.log
