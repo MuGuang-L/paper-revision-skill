@@ -9,6 +9,8 @@
 - ✍️ **LaTeX 感知编辑** - 保留所有 LaTeX 命令，仅修改文本内容
 - 📊 **风格档案** - 生成可重用的写作风格配置文件
 - 🔍 **变更追踪** - 使用 LaTeX diff 格式标记修改
+- 📝 **审稿意见处理** - 解析审稿意见，生成逐点回复信（Rebuttal）
+- 🎯 **优先级修改** - 支持指定重点参考某位审稿人的意见
 
 ## 前置要求
 
@@ -58,6 +60,58 @@ mkdir -p .omc/papers/profiles
 - `revised/main-revised.tex` - 修改后的 LaTeX 文件
 - `revised/changes.md` - 修改说明文档
 - `revised/main-diff.tex` - 带 diff 标记的版本
+
+---
+
+## 审稿意见回复（Rebuttal）
+
+### 1. 准备审稿意见
+
+```bash
+mkdir -p .omc/papers/reviews
+mkdir -p .omc/papers/response
+```
+
+将审稿意见放入 `.omc/papers/reviews/`：
+- 支持 `.txt` 格式（直接复制粘贴）
+- 支持 `.pdf` 格式（自动读取）
+
+```
+.omc/papers/reviews/
+├── reviewer-1.txt
+├── reviewer-2.txt
+└── reviewer-3.txt
+```
+
+### 2. 分析审稿意见
+
+```bash
+# 分析审稿意见，生成修改计划
+/paper-revision analyze-reviews
+
+# 指定重点关注的审稿人
+/paper-revision analyze-reviews --focus "Reviewer 2"
+```
+
+### 3. 根据意见修改论文
+
+```bash
+# 带审稿意见修改
+/paper-revision revise latex/main.tex --with-reviews
+
+# 指定优先级
+/paper-revision revise latex/main.tex --focus "Reviewer 2's major concerns"
+```
+
+### 4. 生成回复信
+
+```bash
+/paper-revision generate-response
+```
+
+输出：
+- `.omc/papers/response/response-to-reviewers.tex` - 逐点回复信
+- 格式：审稿人意见 → 我们的回复 → 修改内容 → 原文定位
 
 ## 目录结构
 

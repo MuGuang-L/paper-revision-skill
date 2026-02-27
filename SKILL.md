@@ -1,6 +1,6 @@
 ---
 name: paper-revision
-description: Learn writing style from reference papers and revise your LaTeX draft
+description: Learn writing style from reference papers and revise your LaTeX draft with reviewer feedback
 triggers:
   - "paper revision"
   - "revise my paper"
@@ -11,6 +11,10 @@ triggers:
   - "修改论文"
   - "润色论文"
   - "latex revision"
+  - "reviewer comments"
+  - "审稿意见"
+  - "rebuttal"
+  - "response to reviewers"
 agent: writer
 model: sonnet
 ---
@@ -32,6 +36,33 @@ This skill activates when:
 ## What It Does
 
 This skill follows a three-phase workflow with LaTeX-specific enhancements:
+
+### Phase 0: Reviewer Comments (Optional)
+
+**Input:** User provides reviewer comments and specifies priorities
+
+**Workflow:**
+1. Parse reviewer comments (from PDF, TXT, or pasted text)
+2. Categorize comments by type:
+   - **Major concerns** - Require significant changes or experiments
+   - **Minor concerns** - Clarifications, typos, additional citations
+   - **Misunderstandings** - Reviewer missed something, needs clarification
+3. User specifies which reviewers to prioritize (e.g., "focus on Reviewer 2's concerns")
+4. Generate a revision action plan mapped to each comment
+
+**Folder Structure:**
+```
+{worktree}/
+├── .omc/
+│   └── papers/
+│       ├── reviews/          # Reviewer comments
+│       │   ├── reviewer-1.txt
+│       │   ├── reviewer-2.txt
+│       │   ├── reviewer-3.txt
+│       │   └── meta-review.pdf
+│       └── response/         # Generated response letter
+│           └── response-to-reviewers.tex
+```
 
 ### Phase 1: Reference Papers Folder Setup
 
@@ -148,6 +179,69 @@ The skill can directly read and modify LaTeX files:
 
 ## Agent Delegation
 
+### Reviewer Comment Processing
+
+```
+Task(
+  subagent_type="oh-my-claudecode:writer",
+  model="sonnet",
+  name="reviewer-comment-analyzer",
+  prompt="REVIEWER COMMENT ANALYSIS TASK
+
+Analyze reviewer comments and create a revision action plan.
+
+Input:
+- Reviewer comments from .omc/papers/reviews/
+- User priorities (e.g., 'focus on Reviewer 2's major concerns')
+
+Analysis Tasks:
+1. Parse and categorize each comment:
+   - Major: Requires significant changes, new experiments, or major rewrites
+   - Minor: Clarifications, typos, additional references, wording changes
+   - Misunderstanding: Reviewer missed something, needs polite clarification
+2. Map comments to paper sections (Introduction, Method, Experiments, etc.)
+3. Estimate effort for each change (LOW/MEDIUM/HIGH)
+4. Identify conflicting comments (reviewers disagree)
+
+Output:
+- Revision plan at .omc/papers/reviews/revision-plan.md
+- Comment-to-section mapping table
+- Priority-ordered action items
+"
+)
+```
+
+### Response Letter Generation
+
+```
+Task(
+  subagent_type="oh-my-claudecode:writer",
+  model="sonnet",
+  name="response-letter-writer",
+  prompt="RESPONSE LETTER GENERATION TASK
+
+Generate a professional response letter to reviewers.
+
+Input:
+- Original reviewer comments
+- List of changes made (from revision-plan.md)
+- Revised manuscript sections
+
+Output:
+- Response letter at .omc/papers/response/response-to-reviewers.tex
+- Format: For each comment, provide:
+  1. Reviewer's comment (quoted)
+  2. Our response (polite, detailed)
+  3. Changes made (with line numbers)
+  4. Pointer to revised text
+
+Tone: Professional, grateful, non-defensive
+"
+)
+```
+
+### Style Analysis and Revision
+
 ```
 Task(
   subagent_type="oh-my-claudecode:writer",
@@ -199,7 +293,42 @@ Output:
 
 ## Workflow
 
-### Step 1: Setup Reference Folder
+### Step 0: Setup Reviewer Comments (Optional)
+
+```bash
+# Create reviewer comments folder
+mkdir -p .omc/papers/reviews
+mkdir -p .omc/papers/response
+```
+
+**User places reviewer comments:**
+```
+.omc/papers/reviews/
+├── reviewer-1.txt
+├── reviewer-2.txt
+├── reviewer-3.txt
+└── meta-review.pdf   (optional)
+```
+
+**Specify priorities:**
+```
+/paper-revision review --focus "Reviewer 2" --focus "Reviewer 3's major concerns"
+```
+
+### Step 1: Analyze Reviewer Comments
+
+Skill invocation:
+```
+/paper-revision analyze-reviews
+```
+
+Actions:
+- Parse all reviewer comments
+- Categorize by type (Major/Minor/Misunderstanding)
+- Map to paper sections
+- Generate revision plan at `.omc/papers/reviews/revision-plan.md`
+
+### Step 2: Setup Reference Folder
 
 ```bash
 # User creates reference folder
@@ -215,7 +344,7 @@ mkdir -p .omc/papers/profiles
 └── acl-paper-3.pdf
 ```
 
-### Step 2: Analyze References
+### Step 3: Analyze References
 
 Skill invocation:
 ```
@@ -228,7 +357,7 @@ Actions:
 - Analyze writing patterns
 - Generate style profile at `.omc/papers/profiles/style-profile.md`
 
-### Step 3: Specify LaTeX Draft
+### Step 4: Specify LaTeX Draft
 
 User provides the LaTeX file to revise:
 ```
@@ -240,15 +369,34 @@ Or specify a chapter/section:
 /paper-revision revise latex/chapters/method.tex
 ```
 
-### Step 4: Apply Revision
+When reviewer comments are available:
+```
+/paper-revision revise latex/main.tex --with-reviews
+```
+This will prioritize changes based on reviewer feedback.
+
+### Step 5: Apply Revision
 
 Actions:
 - Read the specified `.tex` file
 - Apply style profile
+- Address reviewer comments (if provided)
 - Preserve LaTeX structure
 - Write revised output to `revised/` folder
 
-### Step 5: Review and Iterate
+### Step 6: Generate Response Letter (Optional)
+
+When reviewer comments are provided:
+```
+/paper-revision generate-response
+```
+
+Actions:
+- Read revision changes
+- Generate point-by-point response
+- Output to `.omc/papers/response/response-to-reviewers.tex`
+
+### Step 7: Review and Iterate
 
 Output delivered:
 - `revised/main-revised.tex` - Full revised LaTeX file
@@ -276,6 +424,9 @@ User can:
 |---------|----------|
 | Reference papers (input) | `{worktree}/.omc/papers/refs/` |
 | Style profiles | `{worktree}/.omc/papers/profiles/style-profile.md` |
+| Reviewer comments | `{worktree}/.omc/papers/reviews/` |
+| Revision plan | `{worktree}/.omc/papers/reviews/revision-plan.md` |
+| Response letter | `{worktree}/.omc/papers/response/response-to-reviewers.tex` |
 | LaTeX source | `{worktree}/latex/` or user-specified |
 | Revised output | `{worktree}/revised/` |
 | Change tracking | `{worktree}/revised/changes.md` |
@@ -345,6 +496,18 @@ Why good: Scoped revision target, clear reference set.
 User: "润色我的论文，用 diff 格式显示修改"
 Action: 修改论文，输出带\added{}和\deleted{}标记的 LaTeX 文件，方便用户逐条审查。
 Why good: 明确的输出格式要求，便于审阅。
+</Good>
+
+<Good>
+User: "根据审稿意见修改论文，重点回复 Reviewer 2 的主要 Concerns"
+Action: 分析审稿意见，优先处理 Reviewer 2 提出的主要问题，生成修改计划和 response letter。
+Why good: 明确的优先级，包含回复信生成。
+</Good>
+
+<Good>
+User: "I have 3 reviewer comments in .omc/papers/reviews/, analyze them and revise the paper accordingly, especially the methodology concerns from Reviewer 1"
+Action: 解析审稿意见，将意见分类（Major/Minor/Misunderstanding），优先修改方法部分，生成逐点回复。
+Why good: 指定了具体审稿人和关注点。
 </Good>
 
 <Bad>
